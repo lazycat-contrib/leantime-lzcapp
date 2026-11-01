@@ -1,0 +1,75 @@
+application:
+  subdomain: leantime
+  multi_instance: false
+  upstreams:
+    - location: /package-licenses/
+      backend: file:///lzcapp/pkg/content/licenses/
+    - location: /
+      backend: http://leantime:8080/
+
+services:
+  db:
+    image: docker.1ms.run/library/mariadb:10.11
+    environment:
+      - MARIADB_ROOT_PASSWORD={{ stable_secret "leantime_db_root" | replace "\r" "" | replace "\n" "" }}
+      - MARIADB_DATABASE=leantime
+      - MARIADB_USER=leantime
+      - |-
+        MARIADB_PASSWORD={{ stable_secret "leantime_db_password" | replace "\r" "" | replace "\n" "" }}
+    healthcheck:
+      test:
+        - CMD-SHELL
+        - mariadb-admin ping -h 127.0.0.1 -u root -p"$$MARIADB_ROOT_PASSWORD"
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 30s
+    binds:
+      - /lzcapp/var/db:/var/lib/mysql
+
+  leantime:
+    # upstream: leantime/leantime:3.13.2
+    image: docker.1ms.run/leantime/leantime:3.13.2
+    depends_on:
+      - db
+    environment:
+      - LEAN_DB_HOST=db
+      - LEAN_DB_PORT=3306
+      - LEAN_DB_DATABASE=leantime
+      - LEAN_DB_USER=leantime
+      - |-
+        LEAN_DB_PASSWORD={{ stable_secret "leantime_db_password" | replace "\r" "" | replace "\n" "" }}
+      - LEAN_DB_DEFAULT_CONNECTION=mysql
+      - |-
+        LEAN_SESSION_PASSWORD={{ stable_secret "leantime_session_secret" | replace "\r" "" | replace "\n" "" }}
+      - |-
+        LEAN_APP_URL=https://{{ .S.AppDomain }}
+      - LEAN_SITENAME=Leantime
+      - LEAN_LANGUAGE=zh-CN
+      - LEAN_DEFAULT_TIMEZONE=Asia/Shanghai
+      - LEAN_LOG_CHANNELS=stderr
+      - TZ=Asia/Shanghai
+    binds:
+      - /lzcapp/var/public-userfiles:/var/www/html/public/userfiles
+      - /lzcapp/var/storage:/var/www/html/storage
+
+usage: |
+  Leantime 是项目管理与目标追踪工具：把大目标拆成任务、看板排期、记工时、做复盘。
+
+  使用方法：
+  1. 打开应用，第一次进入会出现安装向导，填写邮箱、姓名和公司名，创建第一个管理员账号。
+  2. 建项目（project），在项目里用看板或列表管理任务。
+  3. 用目标（goal）把任务挂到季度目标下，跟踪进度。
+
+  数据与安全：
+  - 数据库在 MariaDB（/lzcapp/var/db），上传的附件在 /lzcapp/var/public-userfiles，应用存储在 /lzcapp/var/storage。
+    卸载应用会一并删除，请定期备份。
+  - 数据库密码与会话密钥由平台稳定密钥生成，每个部署不同，不写成固定值。
+  - 本包不预置任何账号或默认口令；安装向导只在尚未安装时出现，完成后自动跳转到登录页。
+  - 数据库连接信息通过环境变量提供，安装向导只收集管理员与公司信息。
+  - 应用经懒猫入口鉴权访问。
+
+  说明：
+  - 本应用包含两个容器（应用本体 + MariaDB），启动顺序由依赖关系保证。
+  - 未配置邮件服务，邀请成员、找回密码等依赖邮件的功能不可用。
+  - 未做真机验证：安装向导、登录、建项目与任务、看板操作以及重启后持久化均未在设备上实测。

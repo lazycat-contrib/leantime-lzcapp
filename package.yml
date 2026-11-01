@@ -1,0 +1,18 @@
+package: community.lazycat.app.leantime
+name: Leantime
+version: 0.0.0
+description: "Project management for ADHD and neurodivergent teams: goals, tasks, time tracking and retrospectives."
+min_os_version: "1.5.0"
+homepage: https://github.com/Leantime/leantime
+author: Leantime
+license: AGPL-3.0
+permissions:
+  required:
+    - net.internet
+locales:
+  zh:
+    name: Leantime
+    description: "项目管理与目标追踪：把大目标拆成任务、看板排期、记工时、做复盘，适合小团队和个人推进项目。"
+  en:
+    name: Leantime
+    description: "Project management for ADHD and neurodivergent teams: goals, tasks, time tracking and retrospectives."
